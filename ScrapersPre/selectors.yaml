@@ -1,0 +1,14 @@
+selectors:
+  categories: '//header[@class="search-result-header"]/h1' # Example XPath
+  page_content: '//div[@class="search-results-container"]' # Example XPath
+  business_urls: '//div[@class="result"]//a[@class="business-name"]/@href' # Example XPath
+  business_name: '//div[@class="sales-info"]/h1/text()' # Example XPath (on business page)
+  contact: '//p[@class="phone"]/text()' # Example XPath
+  email: '//a[@class="email-business"]/@href' # Example XPath
+  address: '//h2[@class="address"]/following-sibling::p[1]/text()' # Example XPath
+  map_and_direction: '//a[@class="directions"]/@href' # Example XPath
+  review: '//div[@class="ratings"]/*[contains(@class, "rating-stars")]' # Example XPath (get class attr)
+  review_count: '//div[@class="ratings"]//span[@class="count"]/text()' # Example XPath
+  images: '//div[@id="business-photos"]//img/@src' # Example XPath (might need adjustment)
+  website: '//a[@class="website-link"]/@href' # Example XPath
+  # ... other selectors ...
