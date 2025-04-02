@@ -20,7 +20,6 @@ def scrape_website_for_email(driver, url):
         driver.get(url)
         time.sleep(random.uniform(1, 3))
         soup = BeautifulSoup(driver.page_source, 'html.parser')
-        # Look for "Contact Us" or similar links
         contact_link = soup.find('a', string=re.compile('contact|about|reach', re.I))
         if contact_link and 'href' in contact_link.attrs:
             contact_url = contact_link['href']
@@ -33,7 +32,7 @@ def scrape_website_for_email(driver, url):
     except Exception:
         return 'N/A'
 
-def scrape_yellow_pages(search_term, location, max_pages=5):
+def scrape_yellow_pages(search_term, location, max_pages):
     chrome_options = Options()
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--no-sandbox")
@@ -131,10 +130,25 @@ def scrape_yellow_pages(search_term, location, max_pages=5):
     
     return df
 
+def get_max_pages(population):
+    if population < 10000:
+        return 1
+    elif population < 25000:
+        return 2
+    elif population < 50000:
+        return 3
+    elif population < 100000:
+        return 4
+    elif population < 250000:
+        return 5
+    elif population < 500000:
+        return 7
+    else:
+        return 7
+
 if __name__ == "__main__":
-    # Read local CSV
-    df = pd.read_csv("cities.csv")  # Adjust path if needed
-    search_term = "Home Builders"
+    df = pd.read_csv("cities.csv")
+    search_term = "general contractor"
     
     for _, row in df.iterrows():
         location = f"{row['City']}, {row['State']}"
