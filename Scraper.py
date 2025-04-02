@@ -12,25 +12,35 @@ import re
 
 def extract_email_from_text(text):
     email_pattern = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
-    emails = re.findall(email_pattern, text)
+    emails = re.findall(email_pattern, text, re.IGNORECASE)
     return emails[0] if emails else 'N/A'
 
 def scrape_website_for_email(driver, url):
     try:
         driver.get(url)
         time.sleep(random.uniform(1, 3))
-        return extract_email_from_text(BeautifulSoup(driver.page_source, 'html.parser').get_text(separator=' '))
+        soup = BeautifulSoup(driver.page_source, 'html.parser')
+        # Look for "Contact Us" or similar links
+        contact_link = soup.find('a', string=re.compile('contact|about|reach', re.I))
+        if contact_link and 'href' in contact_link.attrs:
+            contact_url = contact_link['href']
+            if not contact_url.startswith('http'):
+                contact_url = url.rstrip('/') + '/' + contact_url.lstrip('/')
+            driver.get(contact_url)
+            time.sleep(random.uniform(1, 2))
+            soup = BeautifulSoup(driver.page_source, 'html.parser')
+        return extract_email_from_text(soup.get_text(separator=' '))
     except Exception:
         return 'N/A'
 
-def scrape_yellow_pages(search_term, location, max_pages=3):
+def scrape_yellow_pages(search_term, location, max_pages=5):
     chrome_options = Options()
     chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
     chrome_options.add_argument("--log-level=3")
+    chrome_options.add_argument("--disable-webgl")
     chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
     chrome_options.add_experimental_option('useAutomationExtension', False)
     
@@ -50,20 +60,18 @@ def scrape_yellow_pages(search_term, location, max_pages=3):
         print(f"Attempting to scrape: {url}")
         
         try:
-            # Restart driver each page to avoid crashes
             driver = webdriver.Chrome(service=service, options=chrome_options)
             driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
             
             driver.get(url)
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight / 2);")
             WebDriverWait(driver, 15).until(
-                EC.presence_of_element_located((By.CLASS_NAME, "result"))  # Try "search-result" or "v-card" if needed
+                EC.presence_of_element_located((By.CLASS_NAME, "result"))
             )
             time.sleep(random.uniform(1, 3))
             
             soup = BeautifulSoup(driver.page_source, 'html.parser')
-            # Broader selector attempt
-            listings = soup.find_all('div', class_='result') or soup.find_all('article') or soup.find_all('div', class_='search-result')
+            listings = soup.find_all('div', class_='result')
             
             if not listings or "Sorry, you have been blocked" in soup.text:
                 print(f"Blocked or no results on page {page}. Saving source.")
@@ -124,8 +132,12 @@ def scrape_yellow_pages(search_term, location, max_pages=3):
     return df
 
 if __name__ == "__main__":
-    search_term = "general contractor"
-    location = "San Diego, CA"
-    max_pages = 3
+    # Read local CSV
+    df = pd.read_csv("cities.csv")  # Adjust path if needed
+    search_term = "Home Builders"
     
-    results = scrape_yellow_pages(search_term, location, max_pages)
+    for _, row in df.iterrows():
+        location = f"{row['City']}, {row['State']}"
+        max_pages = get_max_pages(row['Population'])
+        print(f"Scraping {location} (Population: {row['Population']}, Pages: {max_pages})")
+        results = scrape_yellow_pages(search_term, location, max_pages)
